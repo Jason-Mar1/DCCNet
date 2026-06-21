@@ -1,0 +1,703 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DCCNet | Decoupling Geometry and Appearance for Cross-Domain Crowd Counting</title>
+  <meta name="description" content="Project page for DCCNet: Decoupling Geometry and Appearance for Cross-Domain Crowd Counting." />
+  <meta property="og:title" content="DCCNet" />
+  <meta property="og:description" content="Decoupling geometry and appearance for robust cross-domain crowd counting." />
+  <meta property="og:image" content="assets/og_preview.jpg" />
+  <meta name="theme-color" content="#0f172a" />
+  <style>
+    :root {
+      --bg: #f7f8fc;
+      --surface: rgba(255, 255, 255, 0.88);
+      --surface-strong: #ffffff;
+      --text: #101827;
+      --muted: #627087;
+      --line: rgba(15, 23, 42, 0.1);
+      --brand: #16a7a5;
+      --brand-2: #7c3aed;
+      --brand-3: #ffb84d;
+      --success: #079669;
+      --shadow: 0 24px 80px rgba(15, 23, 42, 0.12);
+      --radius-xl: 30px;
+      --radius-lg: 22px;
+      --radius-md: 16px;
+      --max: 1160px;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(22, 167, 165, 0.18), transparent 34rem),
+        radial-gradient(circle at top right, rgba(124, 58, 237, 0.16), transparent 34rem),
+        linear-gradient(180deg, #fbfcff 0%, var(--bg) 36%, #eef3f8 100%);
+      line-height: 1.6;
+    }
+
+    a { color: inherit; text-decoration: none; }
+    img { max-width: 100%; display: block; }
+
+    .skip-link {
+      position: absolute;
+      left: -999px;
+      top: 1rem;
+      background: var(--text);
+      color: white;
+      padding: 0.6rem 1rem;
+      border-radius: 999px;
+      z-index: 10;
+    }
+    .skip-link:focus { left: 1rem; }
+
+    .nav {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      backdrop-filter: blur(18px);
+      background: rgba(247, 248, 252, 0.72);
+      border-bottom: 1px solid var(--line);
+    }
+    .nav-inner {
+      width: min(var(--max), calc(100% - 40px));
+      margin: 0 auto;
+      min-height: 70px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+    }
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+    }
+    .brand-mark {
+      width: 36px;
+      height: 36px;
+      border-radius: 12px;
+      display: grid;
+      place-items: center;
+      color: white;
+      background: linear-gradient(135deg, var(--brand), var(--brand-2));
+      box-shadow: 0 12px 30px rgba(22, 167, 165, 0.24);
+    }
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      color: var(--muted);
+      font-size: 0.94rem;
+    }
+    .nav-links a {
+      padding: 0.58rem 0.76rem;
+      border-radius: 999px;
+    }
+    .nav-links a:hover { background: rgba(15, 23, 42, 0.06); color: var(--text); }
+
+    .container {
+      width: min(var(--max), calc(100% - 40px));
+      margin: 0 auto;
+    }
+
+    .hero {
+      padding: 86px 0 52px;
+      overflow: hidden;
+    }
+    .hero-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.05fr) minmax(310px, 0.95fr);
+      gap: 48px;
+      align-items: center;
+    }
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0.42rem 0.72rem;
+      border-radius: 999px;
+      background: rgba(22, 167, 165, 0.1);
+      border: 1px solid rgba(22, 167, 165, 0.18);
+      color: #087b78;
+      font-weight: 700;
+      font-size: 0.88rem;
+    }
+    .pulse {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--success);
+      box-shadow: 0 0 0 6px rgba(7, 150, 105, 0.13);
+    }
+    h1 {
+      margin: 22px 0 18px;
+      font-size: clamp(2.55rem, 6vw, 5.8rem);
+      line-height: 0.96;
+      letter-spacing: -0.085em;
+    }
+    .gradient-text {
+      background: linear-gradient(135deg, #101827 10%, var(--brand) 50%, var(--brand-2) 95%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+    .subtitle {
+      margin: 0;
+      font-size: clamp(1.1rem, 2vw, 1.35rem);
+      color: #344156;
+      max-width: 760px;
+    }
+    .authors {
+      margin-top: 18px;
+      color: var(--muted);
+      font-size: 0.98rem;
+    }
+    .authors strong { color: var(--text); }
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 30px;
+    }
+    .button {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 0.85rem 1.08rem;
+      font-weight: 800;
+      transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+    }
+    .button:hover { transform: translateY(-2px); box-shadow: 0 18px 36px rgba(15, 23, 42, 0.12); }
+    .button.primary {
+      color: white;
+      background: linear-gradient(135deg, var(--brand), var(--brand-2));
+      border-color: transparent;
+    }
+    .button.secondary { background: rgba(255, 255, 255, 0.74); }
+    .hero-card {
+      position: relative;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-xl);
+      background: var(--surface);
+      box-shadow: var(--shadow);
+    }
+    .hero-card::before {
+      content: "";
+      position: absolute;
+      inset: -2px;
+      border-radius: inherit;
+      background: linear-gradient(135deg, rgba(22, 167, 165, 0.28), rgba(124, 58, 237, 0.24), rgba(255, 184, 77, 0.2));
+      z-index: -1;
+      filter: blur(14px);
+    }
+    .hero-card img {
+      width: 100%;
+      border-radius: 22px;
+      background: white;
+      border: 1px solid var(--line);
+    }
+    .caption {
+      margin: 14px 4px 2px;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin: 36px auto 0;
+    }
+    .stat {
+      padding: 22px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      background: rgba(255, 255, 255, 0.72);
+      box-shadow: 0 12px 40px rgba(15, 23, 42, 0.06);
+    }
+    .stat strong {
+      display: block;
+      font-size: 1.7rem;
+      line-height: 1;
+      letter-spacing: -0.04em;
+    }
+    .stat span {
+      display: block;
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    section { padding: 70px 0; }
+    .section-heading {
+      display: grid;
+      grid-template-columns: minmax(0, 0.72fr) minmax(280px, 0.8fr);
+      align-items: end;
+      gap: 28px;
+      margin-bottom: 28px;
+    }
+    .kicker {
+      color: var(--brand);
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.11em;
+      font-size: 0.78rem;
+    }
+    h2 {
+      margin: 8px 0 0;
+      font-size: clamp(2rem, 4vw, 3.2rem);
+      line-height: 1.05;
+      letter-spacing: -0.065em;
+    }
+    .lead {
+      margin: 0;
+      color: #445269;
+      font-size: 1.05rem;
+    }
+
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: var(--radius-xl);
+      background: var(--surface);
+      box-shadow: 0 18px 60px rgba(15, 23, 42, 0.08);
+    }
+    .abstract {
+      padding: 34px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 300px;
+      gap: 30px;
+    }
+    .abstract p { margin: 0; color: #354257; }
+    .tag-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-content: start;
+    }
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      border: 1px solid rgba(22, 167, 165, 0.18);
+      color: #087b78;
+      background: rgba(22, 167, 165, 0.09);
+      border-radius: 999px;
+      padding: 0.42rem 0.62rem;
+      font-weight: 750;
+      font-size: 0.83rem;
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 18px;
+      margin-top: 20px;
+    }
+    .card {
+      padding: 24px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      background: rgba(255, 255, 255, 0.72);
+      box-shadow: 0 10px 40px rgba(15, 23, 42, 0.06);
+    }
+    .card .icon {
+      width: 42px;
+      height: 42px;
+      display: grid;
+      place-items: center;
+      border-radius: 14px;
+      background: linear-gradient(135deg, rgba(22, 167, 165, 0.16), rgba(124, 58, 237, 0.14));
+      font-size: 1.2rem;
+    }
+    .card h3 {
+      margin: 16px 0 8px;
+      font-size: 1.15rem;
+      letter-spacing: -0.025em;
+    }
+    .card p { margin: 0; color: var(--muted); }
+
+    .method-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+      margin-top: 18px;
+    }
+    .figure-panel {
+      overflow: hidden;
+    }
+    .figure-panel .figure-body {
+      padding: 18px;
+      background: white;
+      border-bottom: 1px solid var(--line);
+    }
+    .figure-panel img { margin: 0 auto; }
+    .figure-panel .figure-text { padding: 22px; }
+    .figure-panel h3 { margin: 0 0 8px; letter-spacing: -0.03em; }
+    .figure-panel p { margin: 0; color: var(--muted); }
+
+    .wide-figure { overflow: hidden; }
+    .wide-figure .figure-body { padding: 18px; background: white; }
+    .wide-figure img { margin: 0 auto; border-radius: 16px; }
+
+    .table-wrap {
+      overflow-x: auto;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--line);
+      background: var(--surface-strong);
+      box-shadow: 0 14px 50px rgba(15, 23, 42, 0.08);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 760px;
+      font-size: 0.94rem;
+    }
+    th, td {
+      padding: 14px 15px;
+      text-align: left;
+      border-bottom: 1px solid var(--line);
+      vertical-align: middle;
+    }
+    th {
+      color: #344156;
+      background: #f3f7fb;
+      font-size: 0.82rem;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+    }
+    tr:last-child td { border-bottom: 0; }
+    .best { font-weight: 900; color: #087b78; }
+    .ours-row { background: linear-gradient(90deg, rgba(22, 167, 165, 0.09), rgba(124, 58, 237, 0.06)); }
+    .note { margin-top: 12px; color: var(--muted); font-size: 0.92rem; }
+
+    .equations {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      margin-top: 18px;
+    }
+    .equation {
+      padding: 20px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      background: rgba(255,255,255,0.72);
+    }
+    .equation code {
+      display: block;
+      margin-top: 10px;
+      padding: 12px;
+      border-radius: 14px;
+      background: #0f172a;
+      color: #e2e8f0;
+      overflow-x: auto;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.88rem;
+    }
+
+    .bibtex {
+      position: relative;
+      padding: 24px;
+      border-radius: var(--radius-lg);
+      background: #0f172a;
+      color: #dbeafe;
+      overflow-x: auto;
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+    .bibtex pre {
+      margin: 0;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.9rem;
+      white-space: pre-wrap;
+    }
+    .copy-btn {
+      position: absolute;
+      right: 16px;
+      top: 16px;
+      border: 1px solid rgba(255,255,255,0.22);
+      border-radius: 999px;
+      background: rgba(255,255,255,0.08);
+      color: white;
+      padding: 0.45rem 0.7rem;
+      cursor: pointer;
+      font-weight: 800;
+    }
+
+    footer {
+      padding: 38px 0 56px;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    @media (max-width: 900px) {
+      .hero-grid,
+      .section-heading,
+      .abstract,
+      .method-grid,
+      .equations {
+        grid-template-columns: 1fr;
+      }
+      .stats, .cards { grid-template-columns: repeat(2, 1fr); }
+      .nav-links { display: none; }
+      section { padding: 54px 0; }
+    }
+    @media (max-width: 560px) {
+      .container, .nav-inner { width: min(100% - 28px, var(--max)); }
+      .hero { padding-top: 56px; }
+      .stats, .cards { grid-template-columns: 1fr; }
+      .abstract { padding: 24px; }
+      h1 { letter-spacing: -0.07em; }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <nav class="nav" aria-label="Primary navigation">
+    <div class="nav-inner">
+      <a class="brand" href="#top" aria-label="DCCNet home">
+        <span class="brand-mark">D</span>
+        <span>DCCNet</span>
+      </a>
+      <div class="nav-links">
+        <a href="#abstract">Abstract</a>
+        <a href="#method">Method</a>
+        <a href="#results">Results</a>
+        <a href="#citation">Citation</a>
+        <a href="https://github.com/Jason-Mar1/DCCNet" target="_blank" rel="noreferrer">GitHub</a>
+      </div>
+    </div>
+  </nav>
+
+  <header id="top" class="hero">
+    <div class="container hero-grid">
+      <div>
+        <div class="eyebrow"><span class="pulse"></span> ICME 2026 Spotlight · Cross-Domain Crowd Counting</div>
+        <h1><span class="gradient-text">Decoupling Geometry and Appearance</span> for Crowd Counting</h1>
+        <p class="subtitle">DCCNet improves cross-domain transfer by anchoring crowd counting on geometric priors while filtering out appearance style noise.</p>
+        <p class="authors"><strong>Hao-Yuan Ma</strong>, <strong>Li Zhang</strong>, <strong>Yushi Qiu</strong>, <strong>Jie Gao</strong><br />School of Computer Science and Technology, Soochow University</p>
+        <div class="actions">
+          <a class="button primary" href="https://github.com/Jason-Mar1/DCCNet" target="_blank" rel="noreferrer" aria-label="Open GitHub repository">Code on GitHub →</a>
+          <a class="button secondary" href="#method">Explore Method</a>
+          <a class="button secondary" href="#citation">BibTeX</a>
+        </div>
+      </div>
+      <figure class="hero-card">
+        <img src="assets/figure_cross_domain.png" alt="Illustration of source and target domain gaps in cross-domain crowd counting." />
+        <figcaption class="caption">Domain gaps arise from scene layout, camera perspective, illumination, and appearance variations.</figcaption>
+      </figure>
+    </div>
+
+    <div class="container stats" aria-label="DCCNet highlights">
+      <div class="stat"><strong>10/12</strong><span>metrics improved in main transfer settings</span></div>
+      <div class="stat"><strong>DG</strong><span>domain generalization without target fine-tuning</span></div>
+      <div class="stat"><strong>Depth</strong><span>DepthAnything priors for robust geometry</span></div>
+      <div class="stat"><strong>2×</strong><span>dual-view training for style-invariant features</span></div>
+    </div>
+  </header>
+
+  <main id="main">
+    <section id="abstract">
+      <div class="container">
+        <div class="section-heading">
+          <div>
+            <div class="kicker">Overview</div>
+            <h2>Why DCCNet?</h2>
+          </div>
+          <p class="lead">Crowd counting models often fail when moved to unseen camera views or visual styles. DCCNet treats the domain gap as two separable factors: geometry and appearance.</p>
+        </div>
+        <div class="panel abstract">
+          <p>DCCNet explicitly decouples geometric structure from visual appearance for cross-domain crowd counting. The framework uses DepthAnything as a frozen depth-prior provider, aligns RGB and geometry with AGSA, and reconstructs appearance-invariant representations with AIFE. Inference remains streamlined: auxiliary training branches are removed, and the learned dictionary filters unseen target styles before density prediction.</p>
+          <div class="tag-list" aria-label="Keywords">
+            <span class="tag">Crowd Counting</span>
+            <span class="tag">Domain Generalization</span>
+            <span class="tag">Geometry Prior</span>
+            <span class="tag">DepthAnything</span>
+            <span class="tag">Appearance Invariance</span>
+            <span class="tag">Density Estimation</span>
+          </div>
+        </div>
+
+        <div class="cards" aria-label="Main contributions">
+          <article class="card">
+            <div class="icon">①</div>
+            <h3>Geometry-appearance decoupling</h3>
+            <p>Models domain shift as orthogonal geometric and appearance dimensions rather than a single feature-level discrepancy.</p>
+          </article>
+          <article class="card">
+            <div class="icon">②</div>
+            <h3>Depth-guided alignment</h3>
+            <p>Injects robust zero-shot depth priors and uses adaptive alignment to handle perspective and scale changes.</p>
+          </article>
+          <article class="card">
+            <div class="icon">③</div>
+            <h3>Style-invariant reconstruction</h3>
+            <p>Uses a dual-stream consistency strategy and style-invariant prototypes to reduce photometric style noise.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="method">
+      <div class="container">
+        <div class="section-heading">
+          <div>
+            <div class="kicker">Method</div>
+            <h2>DCCNet framework</h2>
+          </div>
+          <p class="lead">The network combines an RGB stream, a geometry stream, AGSA alignment, AIFE feature enhancement, and density prediction.</p>
+        </div>
+
+        <figure class="panel wide-figure">
+          <div class="figure-body">
+            <img src="assets/figure_framework.png" alt="Overall DCCNet framework with RGB encoder, depth encoder, AGSA, AIFE, density head, and auxiliary head." />
+          </div>
+          <figcaption class="caption">Overall pipeline: dual-view training encourages consistency while the depth branch supplies geometry-aware priors.</figcaption>
+        </figure>
+
+        <div class="method-grid">
+          <article class="panel figure-panel">
+            <div class="figure-body">
+              <img src="assets/figure_agsa.png" alt="Adaptive Geometric-Semantic Alignment module with channel and spatial attention blocks." />
+            </div>
+            <div class="figure-text">
+              <h3>AGSA: Adaptive Geometric-Semantic Alignment</h3>
+              <p>AGSA calibrates RGB features using depth-guided structural cues. Learnable channel selection preserves salient density peaks, while deformable spatial attention corrects modality misalignment.</p>
+            </div>
+          </article>
+          <article class="panel figure-panel">
+            <div class="figure-body">
+              <img src="assets/figure_aife.png" alt="Appearance-Invariant Feature Enhancement module using masks and learnable visual features." />
+            </div>
+            <div class="figure-text">
+              <h3>AIFE: Appearance-Invariant Feature Enhancement</h3>
+              <p>AIFE reconstructs features using shared prototypes optimized for canonical crowd patterns, reducing domain-specific texture, weather, and illumination effects.</p>
+            </div>
+          </article>
+        </div>
+
+        <div class="equations" aria-label="Training objectives">
+          <div class="equation">
+            <strong>Density loss</strong>
+            <code>Lden = MSE(Y_hat, Y)</code>
+          </div>
+          <div class="equation">
+            <strong>Auxiliary geometry supervision</strong>
+            <code>Laux = BCE(Paux, Ybin)</code>
+          </div>
+          <div class="equation">
+            <strong>Style consistency</strong>
+            <code>Lcon = ||Frec - Frec_aug||²</code>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="results">
+      <div class="container">
+        <div class="section-heading">
+          <div>
+            <div class="kicker">Experiments</div>
+            <h2>Cross-domain results</h2>
+          </div>
+          <p class="lead">DCCNet is evaluated under standard train-on-source, test-on-target protocols across ShanghaiTech Part A/B, UCF-QNRF, and JHU-CROWD++.</p>
+        </div>
+
+        <div class="table-wrap" role="region" aria-label="Main cross-domain comparison table" tabindex="0">
+          <table>
+            <thead>
+              <tr>
+                <th>Source → Target</th>
+                <th>Best prior MAE</th>
+                <th>DCCNet MAE</th>
+                <th>Best prior MSE</th>
+                <th>DCCNet MSE</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="ours-row"><td>A → B</td><td>11.0</td><td class="best">9.6</td><td>19.3</td><td class="best">17.0</td></tr>
+              <tr class="ours-row"><td>A → Q</td><td>105.3</td><td>108.5</td><td>191.1</td><td class="best">184.5</td></tr>
+              <tr class="ours-row"><td>B → A</td><td>97.6</td><td class="best">89.0</td><td>170.2</td><td class="best">159.5</td></tr>
+              <tr class="ours-row"><td>B → Q</td><td>165.6</td><td class="best">162.3</td><td>290.4</td><td>290.9</td></tr>
+              <tr><td>Q → A</td><td class="best">64.2</td><td>66.3</td><td class="best">101.1</td><td>113.1</td></tr>
+              <tr><td>Q → B</td><td class="best">10.7</td><td>10.8</td><td class="best">18.5</td><td class="best">18.5</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">Lower is better. The paper reports that DCCNet achieves superior performance in 10 out of 12 main metrics; a few settings remain competitive rather than strictly best.</p>
+
+        <div class="cards" style="margin-top: 24px;">
+          <article class="card">
+            <div class="icon">↘</div>
+            <h3>A → B improvement</h3>
+            <p>DCCNet reduces MAE from the strongest prior 11.0 to 9.6, showing the benefit of explicit geometry-aware alignment.</p>
+          </article>
+          <article class="card">
+            <div class="icon">🏟</div>
+            <h3>JHU-CROWD++ robustness</h3>
+            <p>For STR → STA, DCCNet reports 29.8 MAE and 63.4 MSE, outperforming MPCount and DAOT in challenging scene transfers.</p>
+          </article>
+          <article class="card">
+            <div class="icon">⚙</div>
+            <h3>Ablation evidence</h3>
+            <p>Removing AGSA, AIFE, or dual-stream consistency consistently degrades performance, validating the role of each component.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="citation">
+      <div class="container">
+        <div class="section-heading">
+          <div>
+            <div class="kicker">Citation</div>
+            <h2>Cite this work</h2>
+          </div>
+          <p class="lead">Replace the venue fields if your final proceedings metadata differs.</p>
+        </div>
+        <div class="bibtex">
+          <button class="copy-btn" type="button" data-copy="bibtex-code">Copy</button>
+          <pre id="bibtex-code">@inproceedings{ma2026dccnet,
+  title     = {Decoupling Geometry and Appearance for Cross-Domain Crowd Counting},
+  author    = {Ma, Hao-Yuan and Zhang, Li and Qiu, Yushi and Gao, Jie},
+  booktitle = {IEEE International Conference on Multimedia and Expo},
+  year      = {2026}
+}</pre>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="container">
+      Built for the DCCNet project page. Code: <a href="https://github.com/Jason-Mar1/DCCNet" target="_blank" rel="noreferrer">github.com/Jason-Mar1/DCCNet</a>
+    </div>
+  </footer>
+
+  <script>
+    document.querySelectorAll('[data-copy]').forEach((button) => {
+      button.addEventListener('click', async () => {
+        const id = button.getAttribute('data-copy');
+        const text = document.getElementById(id).innerText;
+        try {
+          await navigator.clipboard.writeText(text);
+          const old = button.innerText;
+          button.innerText = 'Copied';
+          setTimeout(() => { button.innerText = old; }, 1400);
+        } catch (err) {
+          button.innerText = 'Select text';
+        }
+      });
+    });
+  </script>
+</body>
+</html>
