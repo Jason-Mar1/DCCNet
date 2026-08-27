@@ -516,7 +516,7 @@
           <p class="lead">Crowd counting models often fail when moved to unseen camera views or visual styles. DCCNet treats the domain gap as two separable factors: geometry and appearance.</p>
         </div>
         <div class="panel abstract">
-          <p>DCCNet explicitly decouples geometric structure from visual appearance for cross-domain crowd counting. The framework uses DepthAnything as a frozen depth-prior provider, aligns RGB and geometry with AGSA, and reconstructs appearance-invariant representations with AIFE. Inference remains streamlined: auxiliary training branches are removed, and the learned dictionary filters unseen target styles before density prediction.</p>
+          <p>DCCNet explicitly decouples geometric structure from visual appearance for cross-domain crowd counting. The framework uses DepthAnything as a frozen depth-prior provider, aligns RGB and geometry with AGSA, and reconstructs appearance-invariant representations with AIFE. At inference, the second augmented-view consistency path is removed while the learned geometry-guided foreground gate remains internal to density prediction.</p>
           <div class="tag-list" aria-label="Keywords">
             <span class="tag">Crowd Counting</span>
             <span class="tag">Domain Generalization</span>
@@ -662,7 +662,7 @@
             <div class="kicker">Citation</div>
             <h2>Cite this work</h2>
           </div>
-          <p class="lead">Replace the venue fields if your final proceedings metadata differs.</p>
+          <p class="lead">Presented at the IEEE International Conference on Multimedia and Expo (ICME) 2026 as a Spotlight paper.</p>
         </div>
         <div class="bibtex">
           <button class="copy-btn" type="button" data-copy="bibtex-code">Copy</button>

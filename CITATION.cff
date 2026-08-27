@@ -1,0 +1,29 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it using the metadata below."
+title: "DCCNet: Decoupling Geometry and Appearance for Cross-Domain Crowd Counting"
+type: software
+authors:
+  - family-names: Ma
+    given-names: Hao-Yuan
+  - family-names: Zhang
+    given-names: Li
+  - family-names: Qiu
+    given-names: Yushi
+  - family-names: Gao
+    given-names: Jie
+repository-code: "https://github.com/Jason-Mar1/DCCNet"
+license: Apache-2.0
+preferred-citation:
+  type: conference-paper
+  title: "Decoupling Geometry and Appearance for Cross-Domain Crowd Counting"
+  authors:
+    - family-names: Ma
+      given-names: Hao-Yuan
+    - family-names: Zhang
+      given-names: Li
+    - family-names: Qiu
+      given-names: Yushi
+    - family-names: Gao
+      given-names: Jie
+  conference: "IEEE International Conference on Multimedia and Expo (ICME)"
+  year: 2026

@@ -1,0 +1,70 @@
+# UCF-QNRF -> ShanghaiTech Part B (paper protocol Q -> B)
+seed: 2023
+version: shanghaitech_qnrf_to_b
+device: cuda:0
+log_para: 1000
+patch_size: 3584
+mode: final
+num_epochs: 200
+checkpoint: logs/shanghaitech_qnrf_to_b/best.pth
+resume_checkpoint: null
+foreground_threshold: 0.4
+loss_weights:
+  lambda_aux: 0.1
+  lambda_con: 0.01
+depth_anything:
+  repo_id: LiheYoung/depth_anything_vits14
+  revision: 1bee667edbfec7f9b345abaffec8c9c2bd5293c2
+  encoder: vits
+  features: 64
+  out_channels: [48, 96, 192, 384]
+  depth_checkpoint: null
+model:
+  name: dccnet
+  params:
+    pretrained: true
+    mem_size: 1024
+    mem_dim: 256
+    cls_thrs: 0.4
+    err_thrs: 0.5
+    den_dropout: 0.5
+    cls_dropout: 0.3
+    has_err_loss: false
+    deterministic: true
+train_dataset: &source_dataset
+  name: den_cls
+  params:
+    root: data/ucf_qnrf
+    crop_size: 320
+    downsample: 1
+    is_grey: false
+    unit_size: 16
+    pre_resize: 1.0
+    foreground_threshold: 0.4
+val_dataset: *source_dataset
+test_dataset:
+  name: den_cls
+  params:
+    root: data/shanghaitech/part_b
+    crop_size: 320
+    downsample: 1
+    is_grey: false
+    unit_size: 16
+    pre_resize: 1.0
+train_loader:
+  batch_size: 8
+  num_workers: 4
+  shuffle: true
+  pin_memory: true
+val_loader: &eval_loader
+  batch_size: 1
+  num_workers: 2
+  shuffle: false
+  pin_memory: true
+test_loader: *eval_loader
+optimizer:
+  name: adam
+  params:
+    lr: 0.0001
+    weight_decay: 0.0
+scheduler: null

@@ -1,0 +1,165 @@
+import torch
+from torch.utils.data import Dataset
+import torchvision.transforms as T
+import torchvision.transforms.functional as F
+from glob import glob
+from pathlib import Path
+import numpy as np
+from PIL import Image
+
+import random
+import os
+
+from utils.misc import GaussianNoise, random_crop, get_padding
+from datasets.jhu_domain_dataset import JHUDomainDataset
+
+class JHUDomainClsDataset(JHUDomainDataset):
+
+    def collate(batch):
+        transposed_batch = list(zip(*batch))
+        images1 = torch.stack(transposed_batch[0], 0)
+        images2 = torch.stack(transposed_batch[1], 0)
+        points = transposed_batch[2]  # the number of points is not fixed, keep it as a list of tensor
+        dmaps = torch.stack(transposed_batch[3], 0)
+        bmaps = torch.stack(transposed_batch[4], 0)
+        return images1, images2, (points, dmaps, bmaps)
+
+    def __init__(self, root, domain_label, crop_size, downsample, method,
+                 is_grey=False, unit_size=0, pre_resize=1, split_root=None,
+                 foreground_threshold=0.4):
+        super().__init__(
+            root=root,
+            domain_label=domain_label,
+            crop_size=crop_size,
+            downsample=downsample,
+            method=method,
+            is_grey=is_grey,
+            unit_size=unit_size,
+            pre_resize=pre_resize,
+            split_root=split_root,
+        )
+        self.foreground_threshold = float(foreground_threshold)
+        if not 0.0 <= self.foreground_threshold <= 1.0:
+            raise ValueError("foreground_threshold must be in [0, 1].")
+
+        self.more_transform = T.Compose([
+            T.RandomApply([T.ColorJitter(brightness=0.5, contrast=0.2, saturation=0.2, hue=0.1)], p=0.8),
+            T.ToTensor(),
+            T.RandomApply([GaussianNoise(std=0.05)], p=0.5),
+            T.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])
+        ])
+
+    def __getitem__(self, index):
+        img_fn = self.img_fns[index]
+
+        img, _ = self._load_img(img_fn)
+        image_path = Path(img_fn)
+        basename = image_path.stem
+        annotation_stem = basename
+        for suffix in ("_aug2", "_aug"):
+            if annotation_stem.endswith(suffix):
+                annotation_stem = annotation_stem[:-len(suffix)]
+                break
+        gt_path = image_path.with_name(annotation_stem + '.npy')
+        gt = self._load_gt(str(gt_path))
+
+        if self.method == 'train':
+            dmap_path = gt_path.with_name(gt_path.stem + '_dmap.npy')
+            dmap = self._load_dmap(str(dmap_path))
+            img1, img2, gt, dmap = self._train_transform(img, gt, dmap)
+            # bmap_orig = dmap.clone().reshape(1, dmap.shape[1]//32, 32, dmap.shape[2]//32, 32).sum(dim=(2, 4))
+            # bmap = ((bmap_orig > 0).long() + (bmap_orig > 1).long()).squeeze(0)
+            bmap_orig = dmap.clone().reshape(1, dmap.shape[1]//16, 16, dmap.shape[2]//16, 16).sum(dim=(2, 4))
+            bmap = (bmap_orig > self.foreground_threshold).float()
+            return img1, img2, gt, dmap, bmap
+        elif self.method in ['val', 'test']:
+            return self._val_transform(img, gt, basename)
+
+    def _train_transform(self, img, gt, dmap):
+        w, h = img.size
+        assert len(gt) >= 0
+
+        dmap = torch.from_numpy(dmap).unsqueeze(0)
+
+        # Grey Scale
+        if random.random() > 0.88:
+            img = img.convert('L').convert('RGB')
+
+        # Padding
+        st_size = 1.0 * min(w, h)
+        if st_size < min(self.crop_size[0], self.crop_size[1]):
+            padding, h, w = get_padding(h, w, self.crop_size[0], self.crop_size[1])
+            left, top, _, _ = padding
+
+            img = F.pad(img, padding)
+            dmap = F.pad(dmap, padding)
+            if len(gt) > 0:
+                gt = gt + [left, top]
+
+        # Cropping
+        i, j = random_crop(h, w, self.crop_size[0], self.crop_size[1])
+        h, w = self.crop_size[0], self.crop_size[1]
+        img = F.crop(img, i, j, h, w)
+        h, w = self.crop_size[0], self.crop_size[1]
+        dmap = F.crop(dmap, i, j, h, w)
+        h, w = self.crop_size[0], self.crop_size[1]
+
+        if len(gt) > 0:
+            gt = gt - [j, i]
+            idx_mask = (gt[:, 0] >= 0) * (gt[:, 0] <= w) * \
+                       (gt[:, 1] >= 0) * (gt[:, 1] <= h)
+            gt = gt[idx_mask]
+        else:
+            gt = np.empty([0, 2])
+
+        # Downsampling
+        down_w = w // self.downsample
+        down_h = h // self.downsample
+        dmap = dmap.reshape([1, down_h, self.downsample, down_w, self.downsample]).sum(dim=(2, 4))
+
+        if len(gt) > 0:
+            gt = gt / self.downsample
+
+        # Flipping
+        if random.random() > 0.5:
+            img = F.hflip(img)
+            dmap = F.hflip(dmap)
+            if len(gt) > 0:
+                gt[:, 0] = w - gt[:, 0]
+
+        # Post-processing
+        img1 = self.transform(img)
+        img2 = self.more_transform(img)
+        gt = torch.from_numpy(gt.copy()).float()
+        dmap = dmap.float()
+
+        return img1, img2, gt, dmap
+
+    def _val_transform(self, img, gt, name):
+        if self.pre_resize != 1:
+            img = img.resize((int(img.size[0] * self.pre_resize), int(img.size[1] * self.pre_resize)))
+
+        if self.unit_size is not None and self.unit_size > 0:
+            # Padding
+            w, h = img.size
+            new_w = (w // self.unit_size + 1) * self.unit_size if w % self.unit_size != 0 else w
+            new_h = (h // self.unit_size + 1) * self.unit_size if h % self.unit_size != 0 else h
+
+            padding, h, w = get_padding(h, w, new_h, new_w)
+            left, top, _, _ = padding
+
+            img = F.pad(img, padding)
+            if len(gt) > 0:
+                gt = gt + [left, top]
+        else:
+            padding = (0, 0, 0, 0)
+
+        # Downsampling
+        gt = gt / self.downsample
+
+        # Post-processing
+        img1 = self.transform(img)
+        img2 = img1.clone()
+        gt = torch.from_numpy(gt.copy()).float()
+
+        return img1, img2, gt, name, padding

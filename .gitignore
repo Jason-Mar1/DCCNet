@@ -1,0 +1,43 @@
+# Raw source bundles and paper exports are not release assets.
+/*.pdf
+/*.zip
+/tmp/
+
+# Datasets, derived density maps, and user-provided JHU manifests.
+/data/
+/datasets_data/
+/splits/jhu/*.txt
+
+# Training artifacts and model weights.
+/logs/
+/weights/
+/checkpoints/
+*.pth
+*.pt
+*.ckpt
+*.safetensors
+
+# Python, test, and tooling caches.
+__pycache__/
+*.py[cod]
+*.so
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.cache/
+
+# Local environments and editor state.
+.venv/
+venv/
+env/
+.env
+.idea/
+.vscode/
+
+# Runtime logs and experiment trackers.
+*.log
+wandb/
+runs/
+tensorboard/
